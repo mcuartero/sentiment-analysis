@@ -1,49 +1,42 @@
 import sqlite3
-import os
+from pathlib import Path
 
-# Create folder for DB if it doesn't exist
-if not os.path.exists('data'):
-    os.makedirs('data')
+DB_PATH = Path(__file__).parent / "data" / "stocks.db"
 
-def get_connection():
-    return sqlite3.connect('data/stocks.db')
+# NOTE: To clear or reset the entire database, just delete the 'data/stocks.db' file.
 
 def init_db():
-    conn = get_connection()
+
+    # Make sure folder exists
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tweets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            symbol TEXT, 
+            symbol TEXT,
             content TEXT UNIQUE,
-            score REAL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     conn.commit()
     conn.close()
-    print("Database initialized.")
+    print(f"Database initialised at {DB_PATH}")
 
-def save_to_db(symbol, content, score):
-    """
-    Look closely at the line below. 
-    The names inside the (parentheses) must match the variables in the execute line.
-    """
-    conn = get_connection()
+def save_to_db(symbol, content):
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     try:
-        # We are passing the values into the SQL query here.
-        # Everything inside the tuple (symbol, content, score) must be defined.
         cursor.execute('''
-            INSERT OR IGNORE INTO tweets (symbol, content, score) 
-            VALUES (?, ?, ?)
-        ''', (symbol, content, score)) 
-        
+            INSERT OR IGNORE INTO tweets (symbol, content)
+            VALUES (?, ?)
+        ''', (symbol, content))
         conn.commit()
     except Exception as e:
         print(f"Error saving to DB: {e}")
     finally:
         conn.close()
-
+    
 if __name__ == "__main__":
     init_db()

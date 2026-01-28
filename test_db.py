@@ -1,20 +1,35 @@
-from database import init_db, save_to_db, get_connection
+from database import init_db, save_to_db
+import sqlite3
+from pathlib import Path
 
-init_db() 
+# Define the path again to check if the file actually exists
+DB_PATH = Path(__file__).parent / "data" / "stocks.db"
 
-# Using 'symbol' as the first argument
-print("Saving test data with symbol $NVDA...")
-save_to_db("$NVDA", "Nvidia is leading the AI race!", 0.85)
+def run_test():
+    print("--- Starting Database Test ---")
 
-conn = get_connection()
-cursor = conn.cursor()
+    # 1. Initialise the database
+    init_db()
 
-# Check if the data is there
-cursor.execute("SELECT * FROM tweets")
-row = cursor.fetchone()
-conn.close()
+    # 2. Try to save sample stock data
+    print("Inserting test data...")
+    save_to_db("TSLA", "New Tesla model announced.")
+    save_to_db("AAPL", "Apple announces new division.")
 
-if row:
-    print(f"✅ Success! Found data: {row}")
-else:
-    print("❌ Fail: Database is still empty.")
+    # 3. Verify the data 
+    if DB_PATH.exists():
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM tweets")
+        results = cursor.fetchall()
+
+        print(f"\nSuccess! Found {len(results)} rows in {DB_PATH.name}:")
+        for row in results:
+            print(f" -> [{row[1]}] {row[2][:50]}... (Saved at: {row[3]})")
+        
+        conn.close()
+    else:
+        print("Error: Database file was not find in data folder.")
+
+if __name__ == "__main__":
+    run_test()
