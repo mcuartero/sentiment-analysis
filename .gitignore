@@ -1,0 +1,6 @@
+# Credentials
+.env
+
+# Databases
+data/
+__pycache__/
