@@ -1,6 +1,6 @@
 # Credentials
 .env
 
-# Databases
-data/
-__pycache__/
+# Documents
+requirements.txt
+
