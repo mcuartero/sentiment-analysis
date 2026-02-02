@@ -17,7 +17,7 @@ collection = db['reddit_raw']
 
 # Push something
 collection.insert_one({
-    "ticker: "TSLA",
+    "ticker": "TSLA",
     "author": "elonmusk",
     "article": "Tesla's stock soars after earnings beat",
 })
