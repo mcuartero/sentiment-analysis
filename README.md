@@ -6,8 +6,10 @@ We're using **Docker** to run a MongoDB instance to store raw files from scrapin
 
 ## Dependencies
 1. Docker
-2. yfinance
-3. python-dotenv 
+2. yfinance 
+3. pymongo
+4. python-dotenv 
+
 
 ## 1. Set Up (Docker)
 
