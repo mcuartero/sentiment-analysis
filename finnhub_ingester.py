@@ -58,7 +58,6 @@ def fetch_company_news(symbol: str, company_name:str, days_back: int = 365, step
     cur = start
 
     # Prepare lower-case versions for better matching
-    l_symbol = symbol.lower()
     l_name = company_name.lower()
 
     # Iterates through the dates, and for each unique news item, adds it to a list
@@ -97,10 +96,14 @@ def fetch_company_news(symbol: str, company_name:str, days_back: int = 365, step
                 # --- RELEVANCE CHECK ---
                 # Check if EITHER (Company Name in BOTH) OR (Ticker in BOTH)
                 name_match = (l_name in h_clean and l_name in s_clean)
-                symbol_match = (l_symbol in h_clean and l_symbol in s_clean)
+                symbol_match = (symbol in it["headline"] and symbol in it["summary"])
+                duo_match = (
+                            (l_name in h_clean and symbol in it["summary"]) or 
+                            (symbol in it["headline"] and l_name in s_clean)
+                )
 
                 # Add to the list if the ticker or company bname is in headline AND summary
-                if name_match or symbol_match:
+                if name_match or symbol_match or duo_match:
                     seen.add(key)
                     all_items.append(it)
 
@@ -121,15 +124,15 @@ def fetch_company_news(symbol: str, company_name:str, days_back: int = 365, step
 news = fetch_company_news("NVDA", "Nvidia", days_back=90, step_days=3)
 print("NVDA total unique:", len(news))
 print(news[0])
-# ----> Returns 1062 unique headlines (in both headline and summary)
+# ----> Returns 1212 unique headlines (in both headline and summary)
 
 news_tsla = fetch_company_news("TSLA", "Tesla", days_back=90,step_days=3)
 print("TSLA total unique:", len(news_tsla))
 print(news_tsla[0])
-# ----> Returns 1151 unique headlines (in both headline and summary)
+# ----> Returns 1220 unique headlines (in both headline and summary)
 
 # check for a niche ticker
 news_cifr = fetch_company_news("CIFR", "Cipher Mining", days_back=90, step_days=3)
 print("CIFR total unique:", len(news_cifr))
 print(news_cifr[0])
-# ----> Returns 34 unique headlines (in both headline and summary)
+# ----> Returns 37 unique headlines (in both headline and summary)
