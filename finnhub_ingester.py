@@ -5,6 +5,8 @@ import html
 from dotenv import load_dotenv
 from datetime import date, timedelta, timezone, datetime
 import time
+from ticker_list import ticker_list
+from database_connector import collection_finnhub
 
 load_dotenv()
 
@@ -45,8 +47,8 @@ def clean_text(text: str) -> str:
 def fetch_company_news(symbol: str, company_name:str, days_back: int = 365, step_days: int = 3):
     """
     Fetches financial news for a ticker of a listed company, 
-    up to a specified number of days in the past. Queries until days_back is reached
-    for a given step_days
+    up to a specified number of days in the past. 
+    Queries until days_back is reached for a given step_days.
     """
     # Calculate today's date and the date for a specified number of days
     end = date.today()
@@ -119,8 +121,11 @@ def fetch_company_news(symbol: str, company_name:str, days_back: int = 365, step
     # Print the dates of the newest and oldest items
     dts = [datetime.fromtimestamp(x["datetime"], tz=timezone.utc) for x in all_items]
     print(f"[{symbol}] oldest: {min(dts)} newest: {max(dts)}")
+    print(f"{company_name} total unique:", len(all_items))
+    print(all_items[0])
     return all_items
 
+'''
 news = fetch_company_news("NVDA", "Nvidia", days_back=90, step_days=3)
 print("NVDA total unique:", len(news))
 print(news[0])
@@ -136,3 +141,66 @@ news_cifr = fetch_company_news("CIFR", "Cipher Mining", days_back=90, step_days=
 print("CIFR total unique:", len(news_cifr))
 print(news_cifr[0])
 # ----> Returns 37 unique headlines (in both headline and summary)
+'''
+
+def query_finnhub_tickers(ticker_list):
+    days_in_three_months = 90
+    step_days = 3
+    total_inserted = 0
+
+    for ticker_item in ticker_list:
+        ticker = ticker_item["ticker"]
+        company = ticker_item["company_name"]
+
+        ticker_news = fetch_company_news(ticker, company, days_in_three_months, step_days)
+
+        docs = []
+        for news_item in ticker_news:
+            docs.append({
+                "ticker": ticker,
+                "company": company,
+                "id": news_item.get("id"),
+                "datetime": news_item.get("datetime"),
+                "headline": news_item.get("headline"),
+                "summary": news_item.get("summary"),
+                "source": news_item.get("source"),
+                "url": news_item.get("url"),
+                "ingested_at": datetime.now(timezone.utc),
+            })
+
+        # Deduplicate within this ticker batch by article id
+        unique_docs = {}
+        for doc in docs:
+            doc_id = doc.get("id")
+            if doc_id:
+                unique_docs[doc_id] = doc
+        docs = list(unique_docs.values())
+
+        # Deduplicate against DB by (ticker, id)
+        ids = [doc["id"] for doc in docs if doc.get("id")]
+        if ids:
+            existing_ids = set(
+                collection_finnhub.distinct(
+                    "id",
+                    {
+                        "ticker": ticker,
+                        "id": {"$in": ids}
+                    }
+                )
+            )
+            docs = [doc for doc in docs if doc.get("id") not in existing_ids]
+
+        if docs:
+            collection_finnhub.insert_many(docs)
+            total_inserted += len(docs)
+
+        print(f"{ticker}: inserted {len(docs)} docs")
+
+        # Finnhub only allow 30 API calls in 1 minute
+        # 90/3 = 30 API calls, so must wait before calling the next ticker
+        time.sleep(60)
+
+    print(f"Total inserted: {total_inserted}")
+
+if __name__ == "__main__":
+    query_finnhub_tickers(ticker_list)
